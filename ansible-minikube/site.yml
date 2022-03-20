@@ -1,0 +1,57 @@
+---
+- name: Install Kubectl
+  hosts: all
+  tasks:
+    - name: download kubectl
+      get_url:
+        url: "https://storage.googleapis.com/kubernetes-release/release/{{ kubectl_version }}/bin/linux/amd64/kubectl"
+        dest: "/tmp/kubectl"
+        mode: 0755
+        timeout: 60
+        force: false
+        validate_certs: false
+      tags: kubectl
+    - name: install kubectl
+      become: true
+      file:
+        src: "/tmp/kubectl"
+        path: "/usr/local/bin/kubectl"
+        state: hard
+        mode: a+x
+      tags: kubectl
+- name: Install Minikube
+  hosts: all
+  tasks:
+    - name: install docker
+      become: true
+      apt:
+        name: docker.io
+        update_cache: yes
+      tags: minikube
+    - name: install conntrack
+      become: true
+      apt:
+        name: conntrack
+        update_cache: yes
+      tags: minikube
+    - name: download minio
+      get_url:
+        url: "https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64"
+        dest: "/tmp/minikube"
+        mode: 0755
+        timeout: 60
+        force: false
+        validate_certs: false
+      tags: minikube
+    - name: install minikube
+      become: true
+      file:
+        src: "/tmp/minikube"
+        path: "/usr/local/bin/minikube"
+        state: hard
+        mode: a+x
+      tags: minikube
+    # - name: start minikube
+    #   become: true
+    #   command: minikube start --vm-driver=none
+
