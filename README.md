@@ -88,16 +88,6 @@ kubectl get pods
 NAME                          READY   STATUS    RESTARTS   AGE
 hello-world-bd79c8b9f-tnzw7   1/1     Running   0          75s
 
-# Создаем LoadBalancer
-kubectl expose deployment hello-world --type=LoadBalancer --port=8080
-service/hello-world exposed
-
-# Смотрим результат
-kubectl get services
-NAME          TYPE           CLUSTER-IP      EXTERNAL-IP   PORT(S)          AGE
-hello-world   LoadBalancer   10.110.40.239   <pending>     8080:32203/TCP   3m1s
-kubernetes    ClusterIP      10.96.0.1       <none>        443/TCP          17m
-
 # Устанавливаем ingress и dashboard
 minikube addons enable ingress
     ▪ Using image k8s.gcr.io/ingress-nginx/controller:v1.1.1
@@ -106,7 +96,6 @@ minikube addons enable ingress
 🔎  Verifying ingress addon...
 🌟  The 'ingress' addon is enabled
 
-minikube addons enable dashboard
 minikube addons enable dashboard
     ▪ Using image kubernetesui/dashboard:v2.3.1
     ▪ Using image kubernetesui/metrics-scraper:v1.0.7
@@ -130,6 +119,35 @@ minikube addons enable dashboard
 
 ### Решение
 
+```bash
+# создаем port-forward в hellopworld на 8080 порт
+kubectl port-forward deployment/hello-world 8080:8080
+Forwarding from 127.0.0.1:8080 -> 8080
+Forwarding from [::1]:8080 -> 8080
+```
+
+```bash
+# проверяем
+curl localhost:8080
+CLIENT VALUES:
+client_address=127.0.0.1
+command=GET
+real path=/
+query=nil
+request_version=1.1
+request_uri=http://localhost:8080/
+
+SERVER VALUES:
+server_version=nginx: 1.10.0 - lua: 10001
+
+HEADERS RECEIVED:
+accept=*/*
+host=localhost:8080
+user-agent=curl/7.74.0
+BODY:
+-no body in request-
+```
+
 
 ---
 
@@ -144,6 +162,11 @@ minikube addons enable dashboard
 </details>  
 
 ### Решение
+
+1. Устанавливаем модуль kubernetes.core (добавлено в requirements.yml)
+> ansible-galaxy collection install -r requirements.yml
+2. Установить модуль kubernetes на python3
+> pip3 install kubernetes
 
 
 ---

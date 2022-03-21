@@ -2,6 +2,10 @@
 - name: Install Kubectl
   hosts: all
   tasks:
+    - name: Check that the kubectl exists
+      stat:
+        path: /usr/local/bin/kubectl
+      register: kubectl_exist
     - name: download kubectl
       get_url:
         url: "https://storage.googleapis.com/kubernetes-release/release/{{ kubectl_version }}/bin/linux/amd64/kubectl"
@@ -11,6 +15,7 @@
         force: false
         validate_certs: false
       tags: kubectl
+      when: not kubectl_exist.stat.exists
     - name: install kubectl
       become: true
       file:
@@ -19,6 +24,7 @@
         state: hard
         mode: a+x
       tags: kubectl
+      when: not kubectl_exist.stat.exists
 - name: Install Minikube
   hosts: all
   tasks:
@@ -34,7 +40,11 @@
         name: conntrack
         update_cache: yes
       tags: minikube
-    - name: download minio
+    - name: Check that the minikube exists
+      stat:
+        path: /usr/local/bin/minikube
+      register: minikube_exist
+    - name: download minikube
       get_url:
         url: "https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64"
         dest: "/tmp/minikube"
@@ -43,6 +53,7 @@
         force: false
         validate_certs: false
       tags: minikube
+      when: not minikube_exist.stat.exists
     - name: install minikube
       become: true
       file:
@@ -51,7 +62,48 @@
         state: hard
         mode: a+x
       tags: minikube
-    # - name: start minikube
-    #   become: true
-    #   command: minikube start --vm-driver=none
-
+      when: not minikube_exist.stat.exists
+    - name: check the status of minikube.
+      become: true
+      command: minikube status
+      register: minikube_status
+      changed_when: false
+      ignore_errors: true
+    - name: start minikube if it's not running.
+      become: true
+      command: minikube start --vm-driver=none
+      when: "not minikube_status.stdout or 'Running' not in minikube_status.stdout"
+    - name: enable ingress addon
+      become: true
+      command: minikube addons enable ingress
+- name: Deploy hello-world app
+  hosts: all
+  tasks:
+    - name: install pip
+      become: true
+      apt:
+        name: pip
+        update_cache: yes
+      tags: minikube
+    - name: Install ansible kubernetes lib
+      become: true
+      pip:
+        name: kubernetes
+    - name: Create hello-world deployment
+      become: true
+      kubernetes.core.k8s:
+        state: present
+        template: 'hello-world-deployment.yaml.j2'
+    - name: Create hello-world service
+      become: true
+      kubernetes.core.k8s:
+        state: present
+        template: 'hello-world-service.yaml.j2'
+    - name: Create hello-world ingress
+      become: true
+      kubernetes.core.k8s:
+        state: present
+        template: 'hello-world-ingress.yaml.j2'
+    - name: update hosts
+      become: true
+      command: sh -c "echo '10.128.0.3 hello-world.local' >> /etc/hosts"
