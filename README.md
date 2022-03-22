@@ -49,14 +49,14 @@ kubeconfig: Configured
 
 ```bash
 kubectl get pods --namespace=kube-system
-NAME                                           READY   STATUS    RESTARTS        AGE
-coredns-64897985d-rjmzf                        1/1     Running   0               3m16s
-etcd-fhmelmgf0r44ftf183ij                      1/1     Running   0               3m27s
-kube-apiserver-fhmelmgf0r44ftf183ij            1/1     Running   0               3m27s
-kube-controller-manager-fhmelmgf0r44ftf183ij   1/1     Running   0               3m27s
-kube-proxy-4mz7c                               1/1     Running   0               3m16s
-kube-scheduler-fhmelmgf0r44ftf183ij            1/1     Running   0               3m27s
-storage-provisioner                            1/1     Running   1 (2m42s ago)   3m21s
+NAME                               READY   STATUS    RESTARTS   AGE
+coredns-64897985d-h4724            1/1     Running   0          6m45s
+etcd-minikube                      1/1     Running   0          6m57s
+kube-apiserver-minikube            1/1     Running   0          6m59s
+kube-controller-manager-minikube   1/1     Running   0          6m57s
+kube-proxy-8bpz5                   1/1     Running   0          6m46s
+kube-scheduler-minikube            1/1     Running   0          6m57s
+storage-provisioner                1/1     Running   0          6m55s
 ```
 ---
 
@@ -75,7 +75,7 @@ storage-provisioner                            1/1     Running   1 (2m42s ago)  
 
 ```bash
 # Создаем deployment hello-world
-kubectl create deployment hello-world --image=k8s.gcr.io/echoserver:1.4
+kubectl create deployment hello-world --image=gcr.io/google-samples/hello-app:1.0
 deployment.apps/hello-node created
 
 # Проверяем deployment hello-world
@@ -129,23 +129,9 @@ Forwarding from [::1]:8080 -> 8080
 ```bash
 # проверяем
 curl localhost:8080
-CLIENT VALUES:
-client_address=127.0.0.1
-command=GET
-real path=/
-query=nil
-request_version=1.1
-request_uri=http://localhost:8080/
-
-SERVER VALUES:
-server_version=nginx: 1.10.0 - lua: 10001
-
-HEADERS RECEIVED:
-accept=*/*
-host=localhost:8080
-user-agent=curl/7.74.0
-BODY:
--no body in request-
+Hello, world!
+Version: 1.0.0
+Hostname: hello-world-deployment-7d7df99987-k7bq8
 ```
 
 
@@ -171,12 +157,35 @@ BODY:
 4. Запускаем плейбук
 > ansible-playbook -i ./inventory/ site.yml 
 5. После выполнения проверям. На хосте с установленным minikube:
-```
+
+```bash
+# Проверка ingress
 curl hello-world.local
+Hello, world!
+Version: 1.0.0
+Hostname: hello-world-deployment-7d7df99987-k7bq8
 
+# deployments
+get deployments
+NAME                     READY   UP-TO-DATE   AVAILABLE   AGE
+hello-world-deployment   2/2     2            2           6m31s
 
+# pods (два пода, потому что в деплойменте указал создание двух реплик)
+kubectl get pods
+NAME                                      READY   STATUS    RESTARTS   AGE
+hello-world-deployment-7d7df99987-k7bq8   1/1     Running   0          7m14s
+hello-world-deployment-7d7df99987-l7jg9   1/1     Running   0          7m14s
+
+# ingress
+kubectl get ingress
+NAME                  CLASS   HOSTS               ADDRESS       PORTS   AGE
+hello-world-ingress   nginx   hello-world.local   10.128.0.20   80      14m
 ```
-Устанавливать на хост с Ubuntu.
-В плейбуке возможны проблемы с идемпотентностью, сильно не усложнял. Приведено для примера.
+
+
+- Устанавливать на хост с Ubuntu.
+- В плейбуке возможны проблемы с идемпотентностью, сильно не усложнял. Приведено для примера.
+- yml с deployment, service и ingress в папке ./ansible-minikube/templates
+  
 
 ---
