@@ -163,10 +163,20 @@ BODY:
 
 ### Решение
 
-1. Устанавливаем модуль kubernetes.core (добавлено в requirements.yml)
+1. Плейбук расположен ./ansible-minikube, комментарии в site.yml
+2. Устанавливаем модуль kubernetes.core (добавлено в requirements.yml)
 > ansible-galaxy collection install -r requirements.yml
-2. Установить модуль kubernetes на python3
-> pip3 install kubernetes
+3. Указываем имя хоста в ./ansible-minikube/inventory/hosts.yml
+> ansible_host: <<***>>
+4. Запускаем плейбук
+> ansible-playbook -i ./inventory/ site.yml 
+5. После выполнения проверям. На хосте с установленным minikube:
+```
+curl hello-world.local
 
+
+```
+Устанавливать на хост с Ubuntu.
+В плейбуке возможны проблемы с идемпотентностью, сильно не усложнял. Приведено для примера.
 
 ---

@@ -1,11 +1,16 @@
 ---
+# Установка kubectl
 - name: Install Kubectl
   hosts: all
   tasks:
+
+  # Проверка, установлен ли kubectl
     - name: Check that the kubectl exists
       stat:
         path: /usr/local/bin/kubectl
       register: kubectl_exist
+
+  # Скачиваем kubectl, если не был установлен
     - name: download kubectl
       get_url:
         url: "https://storage.googleapis.com/kubernetes-release/release/{{ kubectl_version }}/bin/linux/amd64/kubectl"
@@ -16,6 +21,8 @@
         validate_certs: false
       tags: kubectl
       when: not kubectl_exist.stat.exists
+
+  # Устанавливаем kubectl, если не был установлен
     - name: install kubectl
       become: true
       file:
@@ -25,25 +32,35 @@
         mode: a+x
       tags: kubectl
       when: not kubectl_exist.stat.exists
+
+# Установка minikube
 - name: Install Minikube
   hosts: all
   tasks:
+
+  # Установка docker
     - name: install docker
       become: true
       apt:
         name: docker.io
         update_cache: yes
       tags: minikube
+
+  # Установка conntrack
     - name: install conntrack
       become: true
       apt:
         name: conntrack
         update_cache: yes
       tags: minikube
+
+  # Проверка, установлен ли minikube  
     - name: Check that the minikube exists
       stat:
         path: /usr/local/bin/minikube
       register: minikube_exist
+
+  # Скачиваем minikube, если не был установлен
     - name: download minikube
       get_url:
         url: "https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64"
@@ -54,6 +71,8 @@
         validate_certs: false
       tags: minikube
       when: not minikube_exist.stat.exists
+  
+  # Устанавливаем minikube, если не был установлен
     - name: install minikube
       become: true
       file:
@@ -63,47 +82,82 @@
         mode: a+x
       tags: minikube
       when: not minikube_exist.stat.exists
+  
+  # Проверяем, запущен ли minikube
     - name: check the status of minikube.
       become: true
       command: minikube status
       register: minikube_status
       changed_when: false
       ignore_errors: true
+  
+  # Запускаем minikube, если не запущен
     - name: start minikube if it's not running.
       become: true
       command: minikube start --vm-driver=none
       when: "not minikube_status.stdout or 'Running' not in minikube_status.stdout"
+
+  # Определяем minikube ip, если minikube запущен
+    - name: check minikube ip
+      become: true
+      command: minikube ip
+      register: minikube_ip
+      when: "minikube_status.stdout or 'Running' in minikube_status.stdout"
+
+  # Добавляем ingress addon
     - name: enable ingress addon
       become: true
       command: minikube addons enable ingress
+
+# Деплой прилоежние hello-world в кубер
 - name: Deploy hello-world app
   hosts: all
   tasks:
+
+  # Установка pip
     - name: install pip
       become: true
       apt:
         name: pip
         update_cache: yes
       tags: minikube
+  
+  # Установка ansible kubernetes lib
     - name: Install ansible kubernetes lib
       become: true
       pip:
         name: kubernetes
+
+  # Создание deployment hello-world
     - name: Create hello-world deployment
       become: true
       kubernetes.core.k8s:
         state: present
         template: 'hello-world-deployment.yaml.j2'
+
+  # Создание service hello-world
     - name: Create hello-world service
       become: true
       kubernetes.core.k8s:
         state: present
         template: 'hello-world-service.yaml.j2'
+
+  # Создание ingress
     - name: Create hello-world ingress
       become: true
       kubernetes.core.k8s:
         state: present
         template: 'hello-world-ingress.yaml.j2'
+
+  # Проверяем, есть ли запись в hosts
+    - name: check hosts
+      command: cat /etc/hosts
+      register: hosts_status
+      changed_when: false
+      ignore_errors: true
+
+  # Добавляем запись в hosts, если ее нет
     - name: update hosts
       become: true
-      command: sh -c "echo '10.128.0.3 hello-world.local' >> /etc/hosts"
+      command: sh -c "echo '{{ minikube_ip.stdout }} hello-world.local' >> /etc/hosts"
+      when: "'hello-world.local' not in hosts_status.stdout"
